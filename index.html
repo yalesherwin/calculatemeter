@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CHINACNU Steel - 彩涂卷计算器</title>
+  <title>CHINACNU Steel - 彩涂卷 / 压瓦计算器</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -15,11 +15,7 @@
       --gray: #f5f7fa;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Inter', sans-serif;
@@ -36,7 +32,7 @@
       background: var(--white);
       border: 1px solid #e2e8f0;
       border-radius: 16px;
-      max-width: 520px;
+      max-width: 560px;
       width: 100%;
       padding: 2rem;
       box-shadow: 0 8px 30px rgba(0, 77, 155, 0.1);
@@ -99,7 +95,7 @@
       font-size: 0.9rem;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 0.75rem 1rem;
       border-radius: 6px;
@@ -112,6 +108,10 @@
       border-color: var(--accent-color);
       box-shadow: 0 0 6px rgba(74, 144, 226, 0.3);
       outline: none;
+    }
+
+    .form-group.hidden {
+      display: none;
     }
 
     button.calculate-btn {
@@ -164,7 +164,7 @@
 <body>
   <div class="container">
     <button class="language-toggle" onclick="toggleLanguage()">EN / 中文</button>
-    
+
     <div class="logo-brand">
       <svg class="logo-icon" viewBox="0 0 48 48">
         <circle cx="24" cy="24" r="20" fill="#1663b2"/>
@@ -174,36 +174,49 @@
     </div>
 
     <div class="l10n active" data-lang="zh">
-      <h2>彩涂钢卷计算器</h2>
-      <p class="sub">重量、米数、面积智能计算</p>
+      <h2>彩涂钢卷 / 压瓦计算器</h2>
+      <p class="sub">自动计算重量、米数与面积</p>
     </div>
     <div class="l10n" data-lang="en">
-      <h2>Coated Coil Calculator</h2>
-      <p class="sub">Smart weight, length & area calculator</p>
+      <h2>Coated Coil / Roofing Calculator</h2>
+      <p class="sub">Auto calculate weight, length & area</p>
     </div>
 
     <form id="Calculator">
       <div class="form-group">
         <label class="l10n active" data-lang="zh">厚度 (mm)</label>
         <label class="l10n" data-lang="en">Thickness (mm)</label>
-        <input type="number" id="thickness" value="0.6" min="0.1" step="0.01" required />
+        <input type="number" id="thickness" value="0.5" min="0.1" step="0.01" required />
       </div>
 
       <div class="form-group">
         <label class="l10n active" data-lang="zh">宽度 (mm)</label>
         <label class="l10n" data-lang="en">Width (mm)</label>
-        <input type="number" id="width" value="600" min="0.1" step="0.01" required />
+        <input type="number" id="width" value="1000" min="0.1" step="0.01" required />
       </div>
 
-      <button type="submit" class="calculate-btn">CALCULATE / 计算</button>
+      <div class="form-group">
+        <label class="l10n active" data-lang="zh">是否压瓦</label>
+        <label class="l10n" data-lang="en">Roofing Applied?</label>
+        <select id="isRoofed" onchange="toggleRoofInput()">
+          <option value="no">否 / No</option>
+          <option value="yes">是 / Yes</option>
+        </select>
+      </div>
+
+      <div class="form-group hidden" id="roofWidthGroup">
+        <label class="l10n active" data-lang="zh">压瓦展开宽度 (mm)</label>
+        <label class="l10n" data-lang="en">Roofing Unfold Width (mm)</label>
+        <input type="number" id="roofWidth" value="828" min="100" step="1" />
+      </div>
+
+      <button type="submit" class="calculate-btn">计算 / Calculate</button>
       <div class="result-section" id="result"></div>
     </form>
   </div>
 
   <script>
-    const LANGUAGES = {
-      current: 'zh'
-    };
+    const LANGUAGES = { current: 'zh' };
 
     function toggleLanguage() {
       LANGUAGES.current = LANGUAGES.current === 'zh' ? 'en' : 'zh';
@@ -213,40 +226,59 @@
       document.getElementById('result').innerHTML = '';
     }
 
-    function calculate() {
-      const thickness = parseFloat(document.getElementById('thickness').value) / 1000;
-      const width = parseFloat(document.getElementById('width').value) / 1000;
+    function toggleRoofInput() {
+      const isRoofed = document.getElementById("isRoofed").value === "yes";
+      document.getElementById("roofWidthGroup").classList.toggle("hidden", !isRoofed);
+    }
 
-      if (isNaN(thickness) || isNaN(width) || thickness === 0 || width === 0) {
-        document.getElementById('result').innerHTML = '请输入有效的厚度和宽度。';
+    function calculate() {
+      const t = parseFloat(document.getElementById('thickness').value) / 1000;
+      const w = parseFloat(document.getElementById('width').value) / 1000;
+      const isRoofed = document.getElementById("isRoofed").value === "yes";
+      const rw = isRoofed ? parseFloat(document.getElementById("roofWidth").value) / 1000 : null;
+
+      if (!t || !w || (isRoofed && !rw)) {
+        document.getElementById('result').innerHTML = LANGUAGES.current === 'zh' ? '请输入完整数据。' : 'Please enter valid data.';
         return;
       }
 
-      const metersPerTon = 1000 / (thickness * width * 7850);
-      const weightPerMeter = thickness * width * 7850;
-      const areaPerTon = metersPerTon * width;
+      const density = 7850;
+      const baseMeters = 1000 / (t * w * density);
+      const baseWeight = t * w * density;
+      const baseArea = baseMeters * w;
 
-      const zh = `
-        <p><strong>每米重量：</strong> ${weightPerMeter.toFixed(2)} kg/m</p>
-        <p><strong>每吨米数：</strong> ${metersPerTon.toFixed(2)} 米</p>
-        <p><strong>每吨面积：</strong> ${areaPerTon.toFixed(2)} m²</p>
+      let result = `
+        <p><strong>${LANGUAGES.current === 'zh' ? '每米重量' : 'Weight per meter'}:</strong> ${baseWeight.toFixed(2)} kg/m</p>
+        <p><strong>${LANGUAGES.current === 'zh' ? '每吨米数' : 'Meters per ton'}:</strong> ${baseMeters.toFixed(2)} m</p>
+        <p><strong>${LANGUAGES.current === 'zh' ? '每吨面积' : 'Area per ton'}:</strong> ${baseArea.toFixed(2)} m²</p>
       `;
 
-      const en = `
-        <p><strong>Weight per meter:</strong> ${weightPerMeter.toFixed(2)} kg/m</p>
-        <p><strong>Meters per ton:</strong> ${metersPerTon.toFixed(2)} m</p>
-        <p><strong>Area per ton:</strong> ${areaPerTon.toFixed(2)} m²</p>
-      `;
+      if (isRoofed && rw) {
+        const roofMeters = 1000 / (t * rw * density);
+        const roofWeight = t * rw * density;
+        const roofArea = roofMeters * rw;
 
-      document.getElementById('result').innerHTML = LANGUAGES.current === 'zh' ? zh : en;
+        result += `
+          <br><strong style="color: #1663b2;">${LANGUAGES.current === 'zh' ? '压瓦后结果' : 'After Roofing'}</strong><br>
+          <p><strong>${LANGUAGES.current === 'zh' ? '每米重量' : 'Weight per meter'}:</strong> ${roofWeight.toFixed(2)} kg/m</p>
+          <p><strong>${LANGUAGES.current === 'zh' ? '每吨米数' : 'Meters per ton'}:</strong> ${roofMeters.toFixed(2)} m</p>
+          <p><strong>${LANGUAGES.current === 'zh' ? '每吨面积' : 'Area per ton'}:</strong> ${roofArea.toFixed(2)} m²</p>
+        `;
+      }
+
+      document.getElementById("result").innerHTML = result;
     }
 
-    document.getElementById('Calculator').addEventListener('submit', function(e) {
+    document.getElementById("Calculator").addEventListener("submit", function(e) {
       e.preventDefault();
       calculate();
     });
 
-    window.onload = calculate;
+    window.onload = () => {
+      calculate();
+      toggleRoofInput();
+    };
   </script>
 </body>
 </html>
+
