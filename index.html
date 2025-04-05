@@ -174,12 +174,12 @@
     </div>
 
     <div class="l10n active" data-lang="zh">
-      <h2>彩涂钢卷 / 压瓦计算器</h2>
-      <p class="sub">自动计算重量、米数与面积</p>
+      <h2>彩涂卷 / 压瓦计算器</h2>
+      <p class="sub">自动计算重量、米数、面积、张数</p>
     </div>
     <div class="l10n" data-lang="en">
       <h2>Coated Coil / Roofing Calculator</h2>
-      <p class="sub">Auto calculate weight, length & area</p>
+      <p class="sub">Smart calculator for weight, length & sheets</p>
     </div>
 
     <form id="Calculator">
@@ -210,6 +210,12 @@
         <input type="number" id="roofWidth" value="828" min="100" step="1" />
       </div>
 
+      <div class="form-group hidden" id="roofLengthGroup">
+        <label class="l10n active" data-lang="zh">单张瓦长度 (米)</label>
+        <label class="l10n" data-lang="en">Roof Panel Length (m)</label>
+        <input type="number" id="roofLength" value="2.5" min="0.1" step="0.01" />
+      </div>
+
       <button type="submit" class="calculate-btn">计算 / Calculate</button>
       <div class="result-section" id="result"></div>
     </form>
@@ -229,6 +235,7 @@
     function toggleRoofInput() {
       const isRoofed = document.getElementById("isRoofed").value === "yes";
       document.getElementById("roofWidthGroup").classList.toggle("hidden", !isRoofed);
+      document.getElementById("roofLengthGroup").classList.toggle("hidden", !isRoofed);
     }
 
     function calculate() {
@@ -236,13 +243,15 @@
       const w = parseFloat(document.getElementById('width').value) / 1000;
       const isRoofed = document.getElementById("isRoofed").value === "yes";
       const rw = isRoofed ? parseFloat(document.getElementById("roofWidth").value) / 1000 : null;
+      const rl = isRoofed ? parseFloat(document.getElementById("roofLength").value) : null;
 
-      if (!t || !w || (isRoofed && !rw)) {
+      const density = 7850;
+
+      if (!t || !w || (isRoofed && (!rw || !rl))) {
         document.getElementById('result').innerHTML = LANGUAGES.current === 'zh' ? '请输入完整数据。' : 'Please enter valid data.';
         return;
       }
 
-      const density = 7850;
       const baseMeters = 1000 / (t * w * density);
       const baseWeight = t * w * density;
       const baseArea = baseMeters * w;
@@ -253,18 +262,31 @@
         <p><strong>${LANGUAGES.current === 'zh' ? '每吨面积' : 'Area per ton'}:</strong> ${baseArea.toFixed(2)} m²</p>
       `;
 
-      if (isRoofed && rw) {
+      if (isRoofed && rw && rl) {
         const roofMeters = 1000 / (t * rw * density);
         const roofWeight = t * rw * density;
         const roofArea = roofMeters * rw;
+        const sheetsPerTon = Math.floor(roofMeters / rl);
+        const sheetWeight = rl * rw * t * density;
 
         result += `
           <br><strong style="color: #1663b2;">${LANGUAGES.current === 'zh' ? '压瓦后结果' : 'After Roofing'}</strong><br>
           <p><strong>${LANGUAGES.current === 'zh' ? '每米重量' : 'Weight per meter'}:</strong> ${roofWeight.toFixed(2)} kg/m</p>
           <p><strong>${LANGUAGES.current === 'zh' ? '每吨米数' : 'Meters per ton'}:</strong> ${roofMeters.toFixed(2)} m</p>
           <p><strong>${LANGUAGES.current === 'zh' ? '每吨面积' : 'Area per ton'}:</strong> ${roofArea.toFixed(2)} m²</p>
+          <p><strong>${LANGUAGES.current === 'zh' ? '每吨张数' : 'Sheets per ton'}:</strong> ${sheetsPerTon} 张</p>
+          <p><strong>${LANGUAGES.current === 'zh' ? '每张重量' : 'Weight per sheet'}:</strong> ${sheetWeight.toFixed(2)} kg</p>
         `;
       }
+
+      result += `
+        <div style="text-align:center; margin-top:1rem;">
+          <a href="https://wa.me/8619154316688" target="_blank"
+            style="background-color:#25D366; color:white; padding:10px 16px; border-radius:6px; text-decoration:none; font-weight:600;">
+            💬 ${LANGUAGES.current === 'zh' ? '联系我们 (WhatsApp)' : 'Contact us on WhatsApp'}
+          </a>
+        </div>
+      `;
 
       document.getElementById("result").innerHTML = result;
     }
